@@ -1,10 +1,34 @@
 # Embeddable Dodo Checkout
 
-A store adds one script and calls `DodoCheckout.open`. The checkout opens on the same page. Card details stay on the checkout origin and never enter the store's JavaScript.
+One script. The customer stays on the store. The card never enters the store's JavaScript.
 
-## Live
+**[Open the store](https://dodotest-store.vercel.app)** · **[Checkout origin](https://dodotest-checkout.vercel.app)**
 
-The store is [https://dodotest-store.vercel.app](https://dodotest-store.vercel.app). The checkout is [https://dodotest-checkout.vercel.app](https://dodotest-checkout.vercel.app). They are different origins. Share the store link.
+The store is Hale. Each Buy calls `DodoCheckout.open({ productId })`. The price on the Pay button comes from the checkout catalog, so the page cannot talk the charge into a different amount.
+
+| Product | Id | Charged |
+| --- | --- | --- |
+| Wrap hoodie | `prod_hoodie` | $86.00 |
+| Heavy tee | `prod_tee` | $36.00 |
+| Wool cap | `prod_cap` | $24.00 |
+
+![Hale, a three-product store. Buy opens checkout without leaving the page.](docs/store.jpg)
+
+## Checkout
+
+The modal is Dodo, drawn inside an iframe on another origin. The store can pass a product id and an optional email. It cannot pass a price, a name, or HTML.
+
+![Checkout for the wrap hoodie. Pay is $86.00, taken from the catalog.](docs/checkout.jpg)
+
+A successful charge shows a receipt, then closes. The host is told the amount in cents, and only the last four digits of the card.
+
+![Paid receipt. $86.00, card ending in 4242.](docs/receipt.jpg)
+
+## The host learns the truth
+
+`onSuccess` fires as soon as the charge succeeds, with the amount the checkout actually charged. `onClose` fires only after the receipt is dismissed. A decline fires `onError` and leaves the form open.
+
+![Callback log after a successful hoodie payment. onSuccess includes amount 8600, then onClose with reason success.](docs/callbacks.jpg)
 
 ## Run
 
@@ -15,7 +39,7 @@ npm run dev
 
 Open the store at [http://localhost:5173](http://localhost:5173). The checkout app is [http://localhost:5174](http://localhost:5174). They are different origins on purpose.
 
-The store loads `%VITE_CHECKOUT_ORIGIN%/dodo.js` (`http://localhost:5174` in `apps/demo/.env`). To point the script at another checkout host, set `VITE_CHECKOUT_ORIGIN` for the store build and rebuild the SDK with the same origin:
+The store loads `dodo.js` from `VITE_CHECKOUT_ORIGIN` (`http://localhost:5174` in `apps/demo/.env`). To point a build at another checkout host, set that variable and rebuild the SDK with the same origin:
 
 ```bash
 CHECKOUT_ORIGIN=https://checkout.example.com npm run build -w @dodo/sdk
@@ -35,11 +59,19 @@ CHECKOUT_ORIGIN=https://checkout.example.com npm run build -w @dodo/sdk
 </script>
 ```
 
-`productId` is required and must match `^[A-Za-z0-9_-]{1,64}$`. An optional `email` is a prefill only. The store cannot pass a price, a name, or HTML. The catalog lives in the checkout app.
+`productId` is required and must match `^[A-Za-z0-9_-]{1,64}$`. An optional `email` is a prefill only.
 
 `DodoCheckout.close()` asks the checkout to close. It does nothing while a payment is in flight. A second `open()` focuses the checkout that is already open.
 
-`onSuccess` receives `{ sessionId, productId, amount, currency }`. `amount` is in minor units (8600 means $86.00). `onClose` receives `{ reason: "success" | "dismissed" | "error" }` only after the UI is gone. A decline fires `onError` and leaves the checkout open.
+`onSuccess` receives `{ sessionId, productId, amount, currency }`. `amount` is in minor units (`8600` means $86.00). `onClose` receives `{ reason: "success" | "dismissed" | "error" }` only after the UI is gone.
+
+Test cards, any future expiry, any 3-digit CVC, and any valid email:
+
+| Card | Result |
+| --- | --- |
+| `4242 4242 4242 4242` | Succeeds |
+| `4000 0000 0000 0002` | Declines, checkout stays open |
+| `4000 0000 0000 0341` | Fails once, then succeeds |
 
 ## How the pieces talk
 
@@ -52,15 +84,9 @@ CHECKOUT_ORIGIN=https://checkout.example.com npm run build -w @dodo/sdk
 
 Card number, expiry, CVC, and email are not posted back. The attempt count for the retry card is a hash in the checkout origin's `sessionStorage`, so a close and reopen in the same tab still retries correctly.
 
-Test cards, any future expiry, any 3-digit CVC, and any valid email:
-
-- `4242 4242 4242 4242` succeeds
-- `4000 0000 0000 0002` declines
-- `4000 0000 0000 0341` fails once, then succeeds
-
 ## Decisions
 
-**Iframe, not a popup.** A popup isolates the card form and also gets blocked, and it feels like leaving the page. A full-viewport iframe on another origin keeps the customer on the store and keeps the card fields out of the store's DOM. The scrim and dialog are drawn inside the iframe so the store cannot restyle the amount or the pay button. The store can still paint HTML over the iframe. A server-created session and a merchant allowlist would be the next defense. Clicking the scrim does nothing, so a stray click does not discard a half-entered card.
+**Iframe, not a popup.** A popup isolates the card form and also gets blocked, and it feels like leaving the page. A full-viewport iframe on another origin keeps the customer on the store and keeps the card fields out of the store's DOM. The scrim and dialog are drawn inside the iframe so the store cannot restyle the amount or the Pay button. The store can still paint HTML over the iframe. A server-created session and a merchant allowlist would be the next defense. Clicking the scrim does nothing, so a stray click does not discard a half-entered card.
 
 **A decline does not close the checkout.** `onError` fires immediately, the form stays filled, and `onClose` waits until the customer actually leaves. The store learns the truth without treating a failed card as "the customer dismissed the payment."
 
