@@ -2,6 +2,10 @@
 
 A store adds one script and calls `DodoCheckout.open`. The checkout opens on the same page. Card details stay on the checkout origin and never enter the store's JavaScript.
 
+## Live
+
+The store is [https://dodotest-store.vercel.app](https://dodotest-store.vercel.app). The checkout is [https://dodotest-checkout.vercel.app](https://dodotest-checkout.vercel.app). They are different origins. Share the store link.
+
 ## Run
 
 ```bash
