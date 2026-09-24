@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hale — Wrap hoodie</title>
+  </head>
+  <body>
+    <header class="nav">
+      <p class="wordmark">Hale</p>
+      <p class="nav-note">Shop</p>
+    </header>
+
+    <main>
+      <section class="hero">
+        <img class="photo" data-photo="hoodie" alt="Folded rust wrap hoodie" />
+        <div class="copy">
+          <p class="kicker">Outerwear</p>
+          <h1>Wrap hoodie</h1>
+          <p class="lead">Heavy fleece with a high collar. Cut to sit close through the shoulder.</p>
+          <p class="price">$86.00</p>
+          <button class="buy" type="button" data-product="prod_hoodie">Buy</button>
+          <p id="confirmation" class="confirmation" hidden></p>
+          <p class="payline">
+            <img id="powered" alt="Dodo Payments" />
+            Card details stay in Dodo Checkout and never reach this page.
+          </p>
+        </div>
+      </section>
+
+      <section class="more" aria-label="More from Hale">
+        <article>
+          <img class="photo" data-photo="tee" alt="Folded oatmeal heavy tee" />
+          <h2>Heavy tee</h2>
+          <p>Cotton jersey</p>
+          <p class="amount">$36.00</p>
+          <button class="buy" type="button" data-product="prod_tee">Buy</button>
+        </article>
+        <article>
+          <img class="photo" data-photo="cap" alt="Dark green ribbed wool cap" />
+          <h2>Wool cap</h2>
+          <p>Ribbed knit</p>
+          <p class="amount">$24.00</p>
+          <button class="buy" type="button" data-product="prod_cap">Buy</button>
+        </article>
+      </section>
+
+      <section class="review">
+        <div class="cards">
+          <h2>Test cards</h2>
+          <ul>
+            <li><span>4242 4242 4242 4242</span> succeeds</li>
+            <li><span>4000 0000 0000 0002</span> declines</li>
+            <li><span>4000 0000 0000 0341</span> fails once, then succeeds</li>
+          </ul>
+          <button id="buy-unknown" type="button" class="text">Try an unknown product</button>
+        </div>
+        <section class="log-panel" aria-labelledby="log-title">
+          <h2 id="log-title">Callback log</h2>
+          <ol id="log" aria-live="polite"></ol>
+        </section>
+      </section>
+    </main>
+
+    <script src="%VITE_CHECKOUT_ORIGIN%/dodo.js"></script>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

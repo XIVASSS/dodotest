@@ -1,0 +1,16 @@
+{
+  "name": "dodo-embeddable-checkout",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run build -w @dodo/sdk && concurrently -n sdk,checkout,demo -c cyan,green,white \"npm run dev -w @dodo/sdk\" \"npm run dev -w @dodo/checkout\" \"npm run dev -w @dodo/demo\"",
+    "build": "npm run build -w @dodo/sdk && npm run build -w @dodo/checkout && npm run build -w @dodo/demo",
+    "typecheck": "tsc -p packages/sdk --noEmit && tsc -p apps/checkout --noEmit && tsc -p apps/demo --noEmit"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
