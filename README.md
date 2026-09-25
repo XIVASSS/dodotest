@@ -2,7 +2,17 @@
 
 One script. The customer stays on the store. The card never enters the store's JavaScript.
 
-**[Open the store](https://dodotest-store.vercel.app)** · **[Checkout origin](https://dodotest-checkout.vercel.app)**
+**[Open the store](https://dodotest-store.vercel.app)** · **[Checkout origin](https://dodotest-checkout.vercel.app)** · **[Source](https://github.com/XIVASSS/dodotest)**
+
+Send the store link. That is the demo. The checkout link is the other origin, where the card form is hosted.
+
+## Three pieces
+
+| Piece | Where | What it does |
+| --- | --- | --- |
+| SDK | `packages/sdk/src/index.ts`, served as `dodo.js` | One script. `DodoCheckout.open({ productId, onSuccess, onClose, onError })` |
+| Checkout | `apps/checkout`, [dodotest-checkout.vercel.app](https://dodotest-checkout.vercel.app) | Product, email, card, pay. The fake charge happens here. No server |
+| Store | `apps/demo`, [dodotest-store.vercel.app](https://dodotest-store.vercel.app) | Hale. Buy opens the checkout on the page. A log shows the callbacks |
 
 The store is Hale. Each Buy calls `DodoCheckout.open({ productId })`. The price on the Pay button comes from the checkout catalog, so the page cannot talk the charge into a different amount.
 
@@ -16,7 +26,7 @@ The store is Hale. Each Buy calls `DodoCheckout.open({ productId })`. The price 
 
 ## Checkout
 
-The modal is Dodo, drawn inside an iframe on another origin. The store can pass a product id and an optional email. It cannot pass a price, a name, or HTML.
+The modal is Dodo, drawn inside an iframe on another origin. The store can pass a product id and an optional email. It cannot pass a price, a name, or HTML. Apple Pay and Ramp are shown on the form. In this test only the card charges. Opening the checkout address on its own explains that split and still lets you pay for the hoodie.
 
 ![Checkout for the wrap hoodie. Pay is $86.00, taken from the catalog.](docs/checkout.jpg)
 

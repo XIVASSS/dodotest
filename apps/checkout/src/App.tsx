@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode, type RefObject } from "react";
 import logo from "./brand/logo-black.svg";
+import ramp from "./brand/ramp.png";
 import { formatCard, formatCvc, formatExpiry, last4 } from "./card";
 import { catalog, formatMoney, type Product } from "./catalog";
 import { charge } from "./charge";
@@ -21,13 +22,13 @@ function leaveCheckout(reason: CloseReason) {
 }
 
 export function App() {
-  const product = catalog[host.productId] ?? null;
-  const [screen, setScreen] = useState<Screen>("loading");
+  const product = catalog[host.productId] ?? (openedDirectly ? catalog.prod_hoodie : null);
+  const [screen, setScreen] = useState<Screen>(openedDirectly ? "form" : "loading");
   const [busy, setBusy] = useState(false);
-  const [email, setEmail] = useState("");
-  const [card, setCard] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvc, setCvc] = useState("");
+  const [email, setEmail] = useState(openedDirectly ? "ada@hale.shop" : "");
+  const [card, setCard] = useState(openedDirectly ? "4242 4242 4242 4242" : "");
+  const [expiry, setExpiry] = useState(openedDirectly ? "12 / 28" : "");
+  const [cvc, setCvc] = useState(openedDirectly ? "123" : "");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [banner, setBanner] = useState<Banner | null>(null);
   const [session, setSession] = useState("");
@@ -43,7 +44,7 @@ export function App() {
   const settledRef = useRef(false);
   const toldMissing = useRef(false);
 
-  useFocusTrap(dialogRef, screen !== "loading");
+  useFocusTrap(dialogRef, !openedDirectly && screen !== "loading");
 
   useEffect(() => {
     host.post("ready");
@@ -76,6 +77,18 @@ export function App() {
 
   function closeWith(reason: CloseReason) {
     if (busyRef.current) return;
+    if (openedDirectly) {
+      settledRef.current = false;
+      setSession("");
+      setBanner(null);
+      setErrors({});
+      setEmail("ada@hale.shop");
+      setCard("4242 4242 4242 4242");
+      setExpiry("12 / 28");
+      setCvc("123");
+      setScreen("form");
+      return;
+    }
     leaveCheckout(reason);
   }
 
@@ -83,7 +96,7 @@ export function App() {
     return host.onRequestClose(() => {
       if (busyRef.current) return;
       const reason: CloseReason = settledRef.current ? "success" : screen === "missing" ? "error" : "dismissed";
-      leaveCheckout(reason);
+      closeWith(reason);
     });
   }, [screen]);
 
@@ -93,7 +106,7 @@ export function App() {
       event.preventDefault();
       if (busyRef.current) return;
       const reason: CloseReason = settledRef.current ? "success" : screen === "missing" ? "error" : "dismissed";
-      leaveCheckout(reason);
+      closeWith(reason);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -139,21 +152,15 @@ export function App() {
     }
   }
 
-  return (
-    <div
-      className="scrim"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) event.preventDefault();
-      }}
+  const panel = (
+    <section
+      ref={dialogRef}
+      className="dialog"
+      role="dialog"
+      aria-modal={!openedDirectly}
+      aria-labelledby="checkout-title"
+      aria-busy={busy || screen === "loading"}
     >
-      <section
-        ref={dialogRef}
-        className="dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="checkout-title"
-        aria-busy={busy || screen === "loading"}
-      >
         <header className="dialog-head">
           <img className="logo" src={logo} alt="Dodo Payments" />
           <span className="test">Test mode</span>
@@ -170,16 +177,7 @@ export function App() {
         </header>
 
         {screen === "loading" && <Loading />}
-        {screen === "missing" && openedDirectly && (
-          <div className="stack">
-            <h1 id="checkout-title">Open the store to pay</h1>
-            <p className="quiet">This page is the checkout frame. The Buy button is on the store, and the card form opens there.</p>
-            <a className="primary" href={STORE_URL}>
-              Open the store
-            </a>
-          </div>
-        )}
-        {screen === "missing" && !openedDirectly && (
+        {screen === "missing" && (
           <div className="stack">
             <h1 id="checkout-title">This product isn't available</h1>
             <p className="quiet">The store asked for a product this checkout doesn't have. You haven't been charged.</p>
@@ -233,6 +231,18 @@ export function App() {
           </div>
         )}
       </section>
+  );
+
+  if (openedDirectly) return <CheckoutHome>{panel}</CheckoutHome>;
+
+  return (
+    <div
+      className="scrim"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) event.preventDefault();
+      }}
+    >
+      {panel}
     </div>
   );
 }
@@ -258,6 +268,7 @@ function FormView(props: {
   onCancel: () => void;
 }) {
   const amount = formatMoney(props.product.amount, props.product.currency);
+  const [wallet, setWallet] = useState<"apple" | "ramp" | null>(null);
   return (
     <form onSubmit={props.onSubmit} noValidate>
       <p className="eyebrow">Pay {props.product.merchant}</p>
@@ -268,6 +279,34 @@ function FormView(props: {
         </div>
         <p className="price">{amount}</p>
       </div>
+
+      <div className="wallets">
+        <button
+          type="button"
+          className="wallet apple"
+          aria-label="Apple Pay"
+          disabled={props.busy}
+          onClick={() => setWallet("apple")}
+        >
+          <AppleMark />
+          Pay
+        </button>
+        <button
+          type="button"
+          className="wallet ramp"
+          aria-label="Ramp"
+          disabled={props.busy}
+          onClick={() => setWallet("ramp")}
+        >
+          <img src={ramp} alt="" />
+        </button>
+      </div>
+      {wallet && (
+        <p className="wallet-note">
+          {wallet === "apple" ? "Apple Pay" : "Ramp"} isn't in this test. The card below is the charge.
+        </p>
+      )}
+      <p className="or">Or pay with card</p>
 
       {props.banner && (
         <p className="banner" role="alert">
@@ -393,6 +432,52 @@ function Loading() {
   );
 }
 
+function CheckoutHome({ children }: { children: ReactNode }) {
+  return (
+    <main className="home">
+      <header className="home-bar">
+        <img className="logo" src={logo} alt="Dodo Payments" />
+        <a className="home-store" href={STORE_URL}>
+          Store
+        </a>
+      </header>
+      <div className="home-split">
+        <div className="home-copy">
+          <p className="eyebrow">The checkout, hosted here</p>
+          <h1>The card never reaches the store.</h1>
+          <p className="lead">
+            A site adds one script and calls <code>DodoCheckout.open</code>. The customer stays on that page.
+            This frame is what opens.
+          </p>
+          <a className="primary home-go" href={STORE_URL}>
+            Try it on the store
+          </a>
+          <dl>
+            <div>
+              <dt>Store may send</dt>
+              <dd>A product id, and an email as a prefill. Not a price.</dd>
+            </div>
+            <div>
+              <dt>Store is told</dt>
+              <dd>Success, a decline, or why it closed. Never the card.</dd>
+            </div>
+            <div>
+              <dt>This catalog charges</dt>
+              <dd>Hoodie $86.00 · Tee $36.00 · Cap $24.00</dd>
+            </div>
+          </dl>
+          <p className="home-cards">
+            <span>4242…4242 succeeds</span>
+            <span>0002 declines</span>
+            <span>0341 fails once, then succeeds</span>
+          </p>
+        </div>
+        <div className="specimen">{children}</div>
+      </div>
+    </main>
+  );
+}
+
 function CloseIcon() {
   return (
     <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
@@ -405,6 +490,17 @@ function CheckIcon() {
   return (
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
       <path d="M6 12.5l4 4L18 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function AppleMark() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
+      />
     </svg>
   );
 }
