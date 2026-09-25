@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode, type RefObject } from "react";
 import logo from "./brand/logo-black.svg";
 import ramp from "./brand/ramp.png";
-import { formatCard, formatCvc, formatExpiry, last4 } from "./card";
+import { cardBrand, formatCard, formatCvc, formatExpiry, last4, type CardBrand } from "./card";
 import { catalog, formatMoney, type Product } from "./catalog";
 import { charge } from "./charge";
 import { connectHost, type CloseReason } from "./messages";
+import { ScanCode } from "./ScanCode";
 import { useFocusTrap } from "./useFocusTrap";
 import { firstInvalid, validate, type FieldErrors } from "./validate";
 
@@ -43,6 +44,7 @@ export function App() {
   const busyRef = useRef(false);
   const settledRef = useRef(false);
   const toldMissing = useRef(false);
+  const [codeOpen, setCodeOpen] = useState(false);
 
   useFocusTrap(dialogRef, !openedDirectly && screen !== "loading");
 
@@ -161,7 +163,7 @@ export function App() {
       aria-labelledby="checkout-title"
       aria-busy={busy || screen === "loading"}
     >
-        <header className="dialog-head">
+        {!codeOpen && <header className="dialog-head">
           <img className="logo" src={logo} alt="Dodo Payments" />
           <span className="test">Test mode</span>
           <button
@@ -174,7 +176,7 @@ export function App() {
           >
             <CloseIcon />
           </button>
-        </header>
+        </header>}
 
         {screen === "loading" && <Loading />}
         {screen === "missing" && (
@@ -209,6 +211,7 @@ export function App() {
             onCvc={setCvc}
             onSubmit={onSubmit}
             onCancel={() => closeWith("dismissed")}
+            onCode={setCodeOpen}
           />
         )}
         {screen === "success" && product && (
@@ -266,9 +269,32 @@ function FormView(props: {
   onCvc: (value: string) => void;
   onSubmit: (event: FormEvent) => void;
   onCancel: () => void;
+  onCode: (open: boolean) => void;
 }) {
   const amount = formatMoney(props.product.amount, props.product.currency);
   const [wallet, setWallet] = useState<"apple" | "ramp" | null>(null);
+
+  function openCode(next: "apple" | "ramp") {
+    setWallet(next);
+    props.onCode(true);
+  }
+
+  function closeCode() {
+    setWallet(null);
+    props.onCode(false);
+  }
+
+  if (wallet) {
+    return (
+      <div className="paycode">
+        <button type="button" className="icon-button paycode-close" aria-label="Back to card" onClick={closeCode}>
+          <CloseIcon />
+        </button>
+        <ScanCode />
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={props.onSubmit} noValidate>
       <p className="eyebrow">Pay {props.product.merchant}</p>
@@ -286,7 +312,7 @@ function FormView(props: {
           className="wallet apple"
           aria-label="Apple Pay"
           disabled={props.busy}
-          onClick={() => setWallet("apple")}
+          onClick={() => openCode("apple")}
         >
           <AppleMark />
           Pay
@@ -296,16 +322,11 @@ function FormView(props: {
           className="wallet ramp"
           aria-label="Ramp"
           disabled={props.busy}
-          onClick={() => setWallet("ramp")}
+          onClick={() => openCode("ramp")}
         >
           <img src={ramp} alt="" />
         </button>
       </div>
-      {wallet && (
-        <p className="wallet-note">
-          {wallet === "apple" ? "Apple Pay" : "Ramp"} isn't in this test. The card below is the charge.
-        </p>
-      )}
       <p className="or">Or pay with card</p>
 
       {props.banner && (
@@ -336,10 +357,19 @@ function FormView(props: {
             {props.errors.email}
           </small>
         )}
+        <button
+          type="button"
+          className="email-pick"
+          disabled={props.busy}
+          onClick={() => props.onEmail("ada@hale.shop")}
+        >
+          ada@hale.shop
+        </button>
       </label>
 
       <label className="field">
         <span>Card number</span>
+        <span className="card-input">
         <input
           ref={props.cardRef}
           name="cc-number"
@@ -354,6 +384,8 @@ function FormView(props: {
           aria-describedby={props.errors.card ? "card-error" : undefined}
           onChange={(event) => props.onCard(formatCard(event.target.value))}
         />
+        <CardMark brand={cardBrand(props.card)} />
+        </span>
         {props.errors.card && (
           <small id="card-error" className="field-error">
             {props.errors.card}
@@ -492,6 +524,52 @@ function CheckIcon() {
       <path d="M6 12.5l4 4L18 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
+}
+
+function CardMark({ brand }: { brand: CardBrand | null }) {
+  if (brand === "visa") {
+    return (
+      <span className="card-mark" aria-label="Visa">
+        <svg viewBox="0 0 48 16" width="42" height="14" aria-hidden="true">
+          <text x="0" y="13" fill="#1a1f71" fontFamily="Arial, sans-serif" fontSize="15" fontStyle="italic" fontWeight="700">VISA</text>
+        </svg>
+      </span>
+    );
+  }
+  if (brand === "mastercard") {
+    return (
+      <span className="card-mark" aria-label="Mastercard">
+        <svg viewBox="0 0 36 22" width="32" height="20" aria-hidden="true">
+          <circle cx="13" cy="11" r="8" fill="#eb001b" />
+          <circle cx="23" cy="11" r="8" fill="#f79e1b" />
+          <path d="M18 5.2a8 8 0 0 1 0 11.6 8 8 0 0 1 0-11.6z" fill="#ff5f00" />
+        </svg>
+      </span>
+    );
+  }
+  if (brand === "amex") {
+    return (
+      <span className="card-mark" aria-label="American Express">
+        <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">
+          <rect width="32" height="32" fill="#016fd0" />
+          <text x="16" y="14" textAnchor="middle" fill="none" stroke="#fff" strokeWidth="1.15" fontFamily="Arial Black, Arial, sans-serif" fontSize="11" fontWeight="700">AM</text>
+          <text x="16" y="26" textAnchor="middle" fill="none" stroke="#fff" strokeWidth="1.15" fontFamily="Arial Black, Arial, sans-serif" fontSize="11" fontWeight="700">EX</text>
+        </svg>
+      </span>
+    );
+  }
+  if (brand === "rupay") {
+    return (
+      <span className="card-mark" aria-label="RuPay">
+        <svg viewBox="0 0 86 22" width="54" height="16" aria-hidden="true">
+          <text x="0" y="17" fill="#1d3fbf" fontFamily="Arial, Helvetica, sans-serif" fontSize="18" fontStyle="italic" fontWeight="700">RuPay</text>
+          <polygon points="66,2 80,9 66,9" fill="#f26b1d" />
+          <polygon points="70,10 84,17 70,17" fill="#1f9d55" />
+        </svg>
+      </span>
+    );
+  }
+  return null;
 }
 
 function AppleMark() {

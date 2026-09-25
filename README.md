@@ -30,7 +30,7 @@ The modal is Dodo, drawn inside an iframe on another origin. The store can pass 
 
 ![Checkout for the wrap hoodie. Pay is $86.00, taken from the catalog.](docs/checkout.jpg)
 
-A successful charge shows a receipt, then closes. The host is told the amount in cents, and only the last four digits of the card.
+A successful charge shows a receipt, then closes. The host is told the session, the product, and the amount in cents. The receipt inside the checkout shows the last four digits. The card number is not sent back.
 
 ![Paid receipt. $86.00, card ending in 4242.](docs/receipt.jpg)
 

@@ -170,6 +170,36 @@ h1 {
 
 .field-error { color: var(--eclipse); font-size: 12px; }
 
+.email-pick {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #5c616b;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.email-pick:disabled { opacity: 0.45; cursor: default; }
+
+.card-input { position: relative; display: block; }
+
+.card-input input { padding-right: 68px; }
+
+.card-mark {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  height: 22px;
+  pointer-events: none;
+}
+
 .split {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -231,11 +261,39 @@ h1 {
 
 .wallet:disabled { opacity: 0.5; cursor: default; }
 
-.wallet-note {
-  margin: 0 0 10px;
-  color: #3a3a3a;
-  font-size: 13px;
-  line-height: 1.4;
+.paycode {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 440px;
+  padding: 8px 8px 28px;
+}
+
+.paycode-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.paycode-disc {
+  position: relative;
+  width: min(340px, 100%);
+}
+
+.paycode-qr {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.paycode-logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16%;
+  height: 16%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
 }
 
 .or {
